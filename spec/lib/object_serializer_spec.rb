@@ -141,6 +141,26 @@ describe FastJsonapi::ObjectSerializer do
       expect { MovieSerializer.new(movie, options) }.not_to raise_error
     end
 
+    context 'set_id include fail' do
+      before { ActorSerializer.set_id :email }
+      after { ActorSerializer.set_id nil }
+
+      let(:options) { { include: ['actors'] } }
+      subject { MovieSerializer.new(movie, options).serializable_hash }
+
+      it {
+        # you can have an impression about data using
+        # p subject
+
+        # this test also checks order, probably we do not need to check order
+        expect(
+          subject[:data][:relationships][:actors][:data].map { |r| r[:id] }
+        ).to eq(
+          subject[:included].select { |i| i[:type] == :actor }.map { |i| i[:id] }
+        )
+      }
+    end
+
     it 'returns keys when serializing with empty string/nil array includes key' do
       options = {}
       options[:meta] = { total: 2 }
