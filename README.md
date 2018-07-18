@@ -30,6 +30,9 @@ Fast JSON API serialized 250 records in 3.01 ms
   * [Collection Serialization](#collection-serialization)
   * [Caching](#caching)
   * [Params](#params)
+  * [Conditional Attributes](#conditional-attributes)
+  * [Conditional Relationships](#conditional-relationships)
+  * [Sparse Fieldsets](#sparse-fieldsets)
 * [Contributing](#contributing)
 
 
@@ -205,6 +208,18 @@ class MovieSerializer
 end
 ```
 
+Attributes can also use a different name by passing the original method or accessor with a proc shortcut:
+
+```ruby
+class MovieSerializer
+  include FastJsonapi::ObjectSerializer
+
+  attributes :name
+
+  attribute :released_in_year, &:year
+end
+```
+
 ### Links Per Object
 Links are defined in FastJsonapi using the `link` method. By default, link are read directly from the model property of the same name.In this example, `public_url` is expected to be a property of the object being serialized.
 
@@ -350,6 +365,42 @@ end
 # ...
 current_user = User.find(cookies[:current_user_id])
 serializer = MovieSerializer.new(movie, { params: { admin: current_user.admin? }})
+serializer.serializable_hash
+```
+
+### Conditional Relationships
+
+Conditional relationships can be defined by passing a Proc to the `if` key. Return `true` if the relationship should be serialized, and `false` if not. The record and any params passed to the serializer are available inside the Proc as the first and second parameters, respectively.
+
+```ruby
+class MovieSerializer
+  include FastJsonapi::ObjectSerializer
+
+  # Actors will only be serialized if the record has any associated actors
+  has_many :actors, if: Proc.new { |record| record.actors.any? }
+
+  # Owner will only be serialized if the :admin key of params is true
+  belongs_to :owner, if: Proc.new { |record, params| params && params[:admin] == true }
+end
+
+# ...
+current_user = User.find(cookies[:current_user_id])
+serializer = MovieSerializer.new(movie, { params: { admin: current_user.admin? }})
+serializer.serializable_hash
+```
+
+### Sparse Fieldsets
+
+Attributes and relationships can be selectively returned per record type by using the `fields` option.
+
+```ruby
+class MovieSerializer
+  include FastJsonapi::ObjectSerializer
+
+  attributes :name, :year
+end
+
+serializer = MovieSerializer.new(movie, { fields: { movie: [:name] } })
 serializer.serializable_hash
 ```
 

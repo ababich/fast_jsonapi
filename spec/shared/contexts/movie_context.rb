@@ -54,6 +54,10 @@ RSpec.shared_context 'movie class' do
         "#{id}"
       end
 
+      def local_name(locale = :english)
+        "#{locale} #{name}"
+      end
+
       def url
         "http://movies.com/#{id}"
       end
@@ -291,6 +295,20 @@ RSpec.shared_context 'movie class' do
       set_type :movie
       attributes :name
       attribute :director, if: Proc.new { |record, params| params && params[:admin] == true }
+    end
+
+    class MovieOptionalRelationshipSerializer
+      include FastJsonapi::ObjectSerializer
+      set_type :movie
+      attributes :name
+      has_many :actors, if: Proc.new { |record| record.actors.any? }
+    end
+
+    class MovieOptionalRelationshipWithParamsSerializer
+      include FastJsonapi::ObjectSerializer
+      set_type :movie
+      attributes :name
+      belongs_to :owner, record_type: :user, if: Proc.new { |record, params| params && params[:admin] == true }
     end
   end
 
